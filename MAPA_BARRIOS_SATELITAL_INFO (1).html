@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mapa Barrios Privados</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; font-family: sans-serif; }
+    #map { position: absolute; top: 0; left: 300px; right: 0; bottom: 0; z-index: 1; transition: left 0.3s; }
+
+    #sidebar {
+      position: absolute; top: 0; left: 0; bottom: 0; width: 300px; padding: 20px;
+      background: #fff; box-shadow: 2px 0 5px rgba(0,0,0,0.1); z-index: 2;
+      overflow-y: auto; transition: transform 0.3s;
+    }
+
+    #sidebar.hidden { transform: translateX(-100%); }
+    #map.full { left: 0 !important; }
+
+    #toggleBtn {
+      position: absolute; top: 10px; right: 10px; z-index: 3;
+      background: #1e40af; color: white; border: none;
+      border-radius: 4px; padding: 4px 8px; cursor: pointer;
+    }
+
+    #showSidebarBtn {
+      display: none;
+      position: absolute; top: 10px; left: 10px; z-index: 3;
+      background: #1e40af; color: white; border: none;
+      border-radius: 4px; padding: 6px 10px; cursor: pointer;
+    }
+
+    h2 { margin-top: 0; }
+    .barrio-btn { margin-bottom: 10px; width: 100%; padding: 10px; background: #e5e7eb; border: none; border-radius: 6px; cursor: pointer; }
+    .barrio-btn:hover { background: #d1d5db; }
+    select, input[type="text"] {
+      width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; margin-top: 10px;
+    }
+    button.search {
+      margin-top: 10px; width: 100%; padding: 8px; background: #1e40af; color: white;
+      border: none; border-radius: 6px; cursor: pointer;
+    }
+    .leaflet-popup-content-wrapper { font-size: 14px; }
+
+    @media (max-width: 768px) {
+      #sidebar {
+        width: 30vw;
+        max-width: 300px;
+      }
+
+      #map {
+        left: 30vw;
+      }
+
+      #map.full {
+        left: 0 !important;
+      }
+
+      #sidebar.hidden {
+        transform: translateX(-100%);
+      }
+    }
+  </style>
+</head>
+<body oncontextmenu="return false">
+
+<div id="sidebar">
+  <button id="toggleBtn" onclick="ocultarSidebar()">⇦</button>
+  <h2>Barrios</h2>
+  <button class="barrio-btn" onclick="centrarBarrio('Playa Brava')">Playa Brava</button>
+  <button class="barrio-btn" onclick="centrarBarrio('Pinar del Faro')">Pinar del Faro</button>
+  <button class="barrio-btn" onclick="centrarBarrio('Chacras José Ignacio')">Chacras José Ignacio</button>
+
+  <label for="barrioSelect">Elegí un barrio</label>
+  <select id="barrioSelect">
+    <option value="">-- Seleccionar --</option>
+    <option value="Playa Brava">Playa Brava</option>
+    <option value="Pinar del Faro">Pinar del Faro</option>
+    <option value="Chacras José Ignacio">Chacras José Ignacio</option>
+  </select>
+
+  <input type="text" id="searchInput" placeholder="Nombre del lote..." />
+  <button class="search" onclick="buscarLote()">Buscar</button>
+</div>
+
+<button id="showSidebarBtn" onclick="mostrarSidebar()">⇨</button>
+<div id="map"></div>
+
+<script src='https://api.mapbox.com/mapbox-gl-js/v3.14.0/mapbox-gl.js'></script>
+<link href='https://api.mapbox.com/mapbox-gl-js/v3.14.0/mapbox-gl.css' rel='stylesheet' />
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script src="https://unpkg.com/mapbox-gl-leaflet/leaflet-mapbox-gl.js"></script>
+
+<script>
+  /*const map = L.map('map', { zoomControl: true }).setView([-34.82, -54.62], 12);
+  L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+    maxZoom: 20,
+    subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+  }).addTo(map);
+
+  const colores = {
+    "Playa Brava": "#dc2626",
+    "Pinar del Faro": "#059669",
+    "Chacras José Ignacio": "#1e40af"
+  };
+
+  const capas = {};
+  const centroides = {};
+
+  function cargarBarrio(nombre, archivo) {
+    fetch(archivo)
+      .then(res => res.json())
+      .then(geojson => {
+        const capa = L.geoJSON(geojson, {
+          style: {
+            color: colores[nombre],
+            fillOpacity: 0.1,
+            weight: 1
+          },
+          onEachFeature: function (feature, layer) {
+            const nombreLote = feature.properties.name || "Sin nombre";
+            const m2 = feature.properties.superficie_m2?.toFixed(2) || "Sin datos";
+            layer.bindPopup(`<strong>${nombreLote}</strong><br>${m2} m²`);
+            if (!centroides[nombre]) centroides[nombre] = layer.getBounds().getCenter();
+            layer.feature.properties.barrio = nombre;
+          }
+        }).addTo(map);
+        capas[nombre] = capa;
+      });
+  }
+
+  cargarBarrio("Playa Brava", "/geojson_enriched/Playa_Brava.geojson");
+  cargarBarrio("Pinar del Faro", "/geojson_enriched/Pinar_del_Faro.geojson");
+  cargarBarrio("Chacras José Ignacio", "/geojson_enriched/Chacras_JoseIgnacio.geojson");
+
+  function centrarBarrio(nombre) {
+    if (capas[nombre]) {
+      map.fitBounds(capas[nombre].getBounds());
+    }
+  }
+
+  function buscarLote() {
+    const barrioSeleccionado = document.getElementById("barrioSelect").value;
+    const input = document.getElementById("searchInput").value.toLowerCase();
+
+    if (!barrioSeleccionado || !input) {
+      alert("Debes seleccionar un barrio y escribir un lote");
+      return;
+    }
+
+    let encontrado = false;
+
+    for (const barrio in capas) {
+      capas[barrio].eachLayer(layer => {
+        const props = layer.feature.properties;
+        const nombreLote = (props.name || "").toLowerCase();
+        const esBarrioCorrecto = props.barrio === barrioSeleccionado;
+
+        layer.setStyle({
+          color: colores[props.barrio],
+          fillOpacity: 0.1,
+          weight: 1
+        });
+
+        if (esBarrioCorrecto && nombreLote.includes(input)) {
+          layer.openPopup();
+          layer.setStyle({
+            fillColor: "yellow",
+            fillOpacity: 0.6
+          });
+          map.fitBounds(layer.getBounds());
+          encontrado = true;
+        }
+      });
+    }
+
+    if (!encontrado) {
+      alert("Lote no encontrado en ese barrio.");
+    }
+  }
+
+  function ocultarSidebar() {
+    document.getElementById("sidebar").classList.add("hidden");
+    document.getElementById("map").classList.add("full");
+    document.getElementById("showSidebarBtn").style.display = "block";
+    setTimeout(() => map.invalidateSize(), 310);
+  }
+
+  function mostrarSidebar() {
+    document.getElementById("sidebar").classList.remove("hidden");
+    document.getElementById("map").classList.remove("full");
+    document.getElementById("showSidebarBtn").style.display = "none";
+    setTimeout(() => map.invalidateSize(), 310);
+  }*/
+
+  // Definir tu URL de teselas vectoriales servidas por TileServer GL
+  const vectorTileUrl = 'http://localhost:8080/data/Playa_Brava/#{z}/{x}/{y}.pbf';
+
+  // Estilo JSON para las teselas vectoriales (siguiendo Mapbox Style Specification)
+  const myVectorStyle = {
+    'version': 8,
+    'sources': {
+      'mis-poligonos': {
+        'type': 'vector',
+        'tiles': [vectorTileUrl],
+        'minzoom': 10,
+        'maxzoom': 15
+      }
+    },
+    'layers': [
+      // Capa para el relleno del polígono (terreno/barrio)
+      {
+        'id': 'relleno-terreno',
+        'type': 'fill',
+        'source': 'mis-poligonos',
+        'source-layer': 'Playa_Brava', // El nombre que le diste en Tippecanoe
+        'paint': {
+          'fill-color': '#0080ff', // Color por defecto
+          'fill-opacity': [ // Ejemplo: Opacidad condicional basada en un atributo 'estado'
+            'match',
+            ['get', 'estado'],
+            'vendido', 0.5,
+            'disponible', 0.8,
+            0.6 // default
+          ]
+        }
+      },
+      // Capa para el borde del polígono
+      {
+        'id': 'borde-terreno',
+        'type': 'line',
+        'source': 'mis-poligonos',
+        'source-layer': 'Playa_Brava',
+        'paint': {
+          'line-color': '#ffffff',
+          'line-width': 1
+        }
+      }
+    ]
+  };
+
+  // Crea el mapa Leaflet
+  const map = L.map('map').setView([-34.82602, -54.64395], 16);
+
+  // Añade una capa base (ej. satelital ESRI)
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri'
+  }).addTo(map);
+
+  // Añade la capa de teselas vectoriales
+  const vectorLayer = L.mapboxGL({
+    style: myVectorStyle // Tu objeto de estilo JSON
+  }).addTo(map);
+
+  // Evento de clic en los polígonos vectoriales
+  map.on('click', function(e) {
+    // `mapboxgl.querySourceFeatures` permite obtener los atributos de los features clickeados
+    // Debes tener en cuenta el ID de la capa que clickeaste ('relleno-terreno' en este caso)
+    const features = map.options.mapboxgl.queryRenderedFeatures(e.containerPoint, {
+      layers: ['relleno-terreno'] // ID de la capa de estilo que contiene los polígonos
+    });
+
+    if (features.length > 0) {
+      const clickedFeature = features[0];
+      const polygonId = clickedFeature.properties.id_unica; // Suponiendo que 'id_unica' es el atributo ID
+      console.log('Polígono clickeado ID:', polygonId);
+
+      // AQUI LLAMADA A TU API / BACKEND PARA OBTENER INFO DETALLADA
+      fetch(`/api/propiedades/${polygonId}`)
+              .then(response => response.json())
+              .then(data => {
+                // Muestra la información en un popup o un panel lateral
+                L.popup()
+                        .setLatLng(e.latlng)
+                        .setContent(`
+                        <b>Propiedad ID:</b> ${data.id_propiedad}<br>
+                        <b>Dirección:</b> ${data.direccion}<br>
+                        <b>Estado:</b> ${data.estado_venta}<br>
+                        <b>Precio:</b> ${data.precio}<br>
+                        <img src="${data.url_foto}" style="width:100px;"><br>
+                        <a href="${data.url_video}" target="_blank">Ver Video</a>
+                    `)
+                        .openOn(map);
+              })
+              .catch(error => console.error('Error al obtener info de propiedad:', error));
+    }
+  });
+</script>
+</body>
+</html>
