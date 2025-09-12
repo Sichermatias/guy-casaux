@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Mapa Barrios Privados</title>
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css" />
+	<link href="https://unpkg.com/maplibre-gl@2.2.1/dist/maplibre-gl.css" rel="stylesheet" />
+	<link rel="stylesheet" href="main.css" />
+</head>
+
+<body oncontextmenu="return false">
+
+	<div id="sidebar">
+		<button id="toggleBtn" onclick="ocultarSidebar()">⇦</button>
+		<h2>Barrios</h2>
+		<button class="barrio-btn" onclick="centrarBarrio('Playa Brava')">Playa Brava</button>
+		<button class="barrio-btn" onclick="centrarBarrio('Pinar del Faro')">Pinar del Faro</button>
+		<button class="barrio-btn" onclick="centrarBarrio('Chacras José Ignacio')">Chacras José Ignacio</button>
+
+		<label for="barrioSelect">Elegí un barrio</label>
+		<select id="barrioSelect">
+			<option value="">-- Seleccionar --</option>
+			<option value="Playa Brava">Playa Brava</option>
+			<option value="Pinar del Faro">Pinar del Faro</option>
+			<option value="Chacras José Ignacio">Chacras José Ignacio</option>
+		</select>
+
+		<input type="text" id="searchInput" placeholder="Nombre del lote..." />
+		<button class="search" onclick="buscarLote()">Buscar</button>
+	</div>
+
+	<button id="showSidebarBtn" onclick="mostrarSidebar()">⇨</button>
+	<div id="map"></div>
+
+	<!-- Scripts externos -->
+	<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+	<script src="https://unpkg.com/maplibre-gl@2.2.1/dist/maplibre-gl.js"></script>
+	<script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.20/leaflet-maplibre-gl.js"></script>
+
+	<!-- Script principal -->
+	<script src="mapa-barrios.js"></script>
+</body>
+
+</html>
